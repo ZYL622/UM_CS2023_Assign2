@@ -1,0 +1,72 @@
+
+
+# clear all variables in workspce
+
+```{r setup-clear}
+rm(list=ls())
+```
+
+# Given dataset
+
+```{r setup, include=FALSE}
+# install.packages("bootstrap")  #need to install bootstrap on google colab first
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+library('tictoc')
+law_new <- law[1:8,] # choose top 8 data because of computer limit
+data(law) 
+law_new %<>% add_column(observation = 1:nrow(law_new), .before = 1) 
+ggplot(law_new, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+```
+
+# Task1 Complete Enumeration Bootstrap
+
+```{r }
+tic()
+
+# Load necessary libraries
+library(gtools)
+# Define a function to compute correlation for each permutation
+correlation_permutation <- function(indices, data) {
+  selected_data <- data[indices, ]
+  return(cor(selected_data$LSAT, selected_data$GPA))
+}
+# Create all possible permutations of data points
+n <- nrow(law_new)
+index_permutations <- permutations(n, n, set = FALSE, repeats = TRUE)
+# Compute correlation for each permutation
+correlations <- apply(index_permutations, 1, correlation_permutation, data = law_new)
+
+# Remove any NA values from correlations
+correlations_results <- correlations[!is.na(correlations)]
+
+
+# Calculate mean and standard deviation of correlations
+mean_correlation <- mean(correlations_results)
+std_dev_correlation <- sd(correlations_results)
+# Print results
+cat("Mean correlation:", mean_correlation, "\n")
+cat("Standard deviation of correlation:", std_dev_correlation, "\n")
+
+toc()
+```
+
+```{r}
+## generate histogram
+
+
+# Create histogram using ggplot2
+histogram_plot <- ggplot(data.frame(correlations_results), aes(x = correlations_results, fill = ..count..)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.8) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Pearson's correlation coefficient", y = "Frequency", title = "Enumerate Bootstrap Distribution of Correlation Coefficients") +
+  theme_minimal()
+# Display the histogram
+print(histogram_plot)
+
+```
+
