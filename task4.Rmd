@@ -1,0 +1,108 @@
+---
+title: "task4-Experimental proof"
+author: "ZYL"
+date: "2023-03-22"
+---
+
+
+# clear all variables in workspce
+```{r setup-clear}
+rm(list=ls())
+```
+
+# Given dataset
+```{r setup, include=FALSE}
+# install.packages("bootstrap") 
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+library('tictoc')
+
+## create data without outliers
+without_outlier <- law[-c(1,12,11,15,7,3,14),] # actually, only the data in the row of 1,12,11,15 need to be deleted. But my computer can only deal with at maximum of 8 data in enumerate bootstrap, so we delete three more data which seem more like outlier compared with others.
+
+without_outlier %<>% add_column(observation = 1:nrow(without_outlier), .before = 1) 
+ggplot(without_outlier, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+
+
+## keep outlier
+with_outlier <- law[-c(13,2,9,8,5,10,4),] 
+
+with_outlier %<>% add_column(observation = 1:nrow(with_outlier), .before = 1) 
+ggplot(with_outlier, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+
+```
+
+# Complete Enumeration Bootstrap - without outlier
+```{r }
+tic() # calculate the time used
+
+# Load necessary libraries
+library(gtools)
+# Define a function to compute correlation for each permutation
+correlation_permutation <- function(indices, data) {
+  selected_data <- data[indices, ]
+  return(cor(selected_data$LSAT, selected_data$GPA))
+}
+# Create all possible permutations of data points
+n <- nrow(without_outlier)
+index_permutations <- permutations(n, n, set = FALSE, repeats = TRUE)
+# Compute correlation for each permutation
+correlations <- apply(index_permutations, 1, correlation_permutation, data = without_outlier)
+
+# Remove any NA values from correlations
+correlations_results <- correlations[!is.na(correlations)]
+
+
+# Calculate mean and standard deviation of correlations
+mean_correlation <- mean(correlations_results)
+std_dev_correlation <- sd(correlations_results)
+# Print results
+cat("Mean correlation:", mean_correlation, "\n")
+cat("Standard deviation of correlation:", std_dev_correlation, "\n")
+
+toc()
+```
+# Complete Enumeration Bootstrap - with outlier
+```{r}
+tic() # calculate the time used
+
+# Create all possible permutations of data points
+n <- nrow(with_outlier)
+index_permutations <- permutations(n, n, set = FALSE, repeats = TRUE)
+# Compute correlation for each permutation
+correlations_with <- apply(index_permutations, 1, correlation_permutation, data = with_outlier)
+
+# Remove any NA values from correlations
+correlations_results_with <- correlations[!is.na(correlations_with)]
+
+
+# Calculate mean and standard deviation of correlations
+mean_correlation_with <- mean(correlations_results_with)
+std_dev_correlation_with <- sd(correlations_results_with)
+# Print results
+cat("Mean correlation with outlier:", mean_correlation_with, "\n")
+cat("Standard deviation of correlation with outlier:", std_dev_correlation_with, "\n")
+
+toc()
+```
+
+
+
+# compare results - with & without outlier
+```{r}
+# without outlier
+cor_without <- cor(without_outlier$LSAT, without_outlier$GPA)
+diff_without <- cor_without - mean_correlation
+
+# with outlier
+cor_with <- cor(with_outlier$LSAT, with_outlier$GPA)
+diff_with <- cor_with - mean_correlation_with
+```
+
+
